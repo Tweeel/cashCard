@@ -1,7 +1,8 @@
 package com.example.cashcard
 
 import com.example.cashcard.models.CashCard
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.json.JsonTest
@@ -11,19 +12,34 @@ import java.io.IOException
 
 @JsonTest
 internal class CashCardJsonTest {
+
     @Autowired
-    private val json: JacksonTester<CashCard>? = null
+    private lateinit var json: JacksonTester<CashCard>
+
+    @Autowired
+    private lateinit var jsonList: JacksonTester<Array<CashCard>>
+
+    private lateinit var cashCards: Array<CashCard>
+
+    @BeforeEach
+    fun setUp() {
+        cashCards = arrayOf(
+            CashCard(99L, 123.45),
+            CashCard(100L, 1.00),
+            CashCard(101L, 150.00)
+        )
+    }
 
     @Test
     @Throws(IOException::class)
     fun cashCardSerializationTest() {
-        val cashCard = CashCard(99L, 123.45)
-        Assertions.assertThat(json!!.write(cashCard)).isStrictlyEqualToJson("expected.json")
-        Assertions.assertThat(json.write(cashCard)).hasJsonPathNumberValue("@.id")
-        Assertions.assertThat(json.write(cashCard)).extractingJsonPathNumberValue("@.id")
+        val cashCard = cashCards[0]
+        assertThat(json.write(cashCard)).isStrictlyEqualToJson("single.json")
+        assertThat(json.write(cashCard)).hasJsonPathNumberValue("@.id")
+        assertThat(json.write(cashCard)).extractingJsonPathNumberValue("@.id")
             .isEqualTo(99)
-        Assertions.assertThat(json.write(cashCard)).hasJsonPathNumberValue("@.amount")
-        Assertions.assertThat(json.write(cashCard)).extractingJsonPathNumberValue("@.amount")
+        assertThat(json.write(cashCard)).hasJsonPathNumberValue("@.amount")
+        assertThat(json.write(cashCard)).extractingJsonPathNumberValue("@.amount")
             .isEqualTo(123.45)
     }
 
@@ -36,9 +52,29 @@ internal class CashCardJsonTest {
                     "amount": 123.45
                 }
                 """.trimIndent()
-        Assertions.assertThat(json!!.parse(expected))
+        assertThat(json.parse(expected))
             .isEqualTo(CashCard(99L, 123.45))
-        Assertions.assertThat(json.parseObject(expected).id).isEqualTo(99)
-        Assertions.assertThat(json.parseObject(expected).amount).isEqualTo(123.45)
+        assertThat(json.parseObject(expected).id).isEqualTo(99)
+        assertThat(json.parseObject(expected).amount).isEqualTo(123.45)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun cashCardListSerializationTest() {
+        assertThat(jsonList.write(cashCards)).isStrictlyEqualToJson("list.json")
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun cashCardListDeserializationTest() {
+        val expected = """
+         [
+            { "id": 99, "amount": 123.45 },
+            { "id": 100, "amount": 1.00 },
+            { "id": 101, "amount": 150.00 }
+         ]
+         
+         """.trimIndent()
+        assertThat(jsonList.parse(expected)).isEqualTo(cashCards)
     }
 }

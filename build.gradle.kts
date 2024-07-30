@@ -39,8 +39,4 @@ kotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    testLogging {
-        // Set to `true` for more detailed logging.
-        showStandardStreams = true
-    }
 }

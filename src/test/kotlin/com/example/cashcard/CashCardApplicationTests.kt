@@ -2,53 +2,115 @@ package com.example.cashcard
 
 import com.example.cashcard.models.CashCard
 import com.jayway.jsonpath.JsonPath
-import org.assertj.core.api.Assertions
+import net.minidev.json.JSONArray
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.http.HttpStatus
+import org.springframework.test.annotation.DirtiesContext
 import java.net.URI
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+//@DirtiesContext(classMode = ClassMode.AFTER_EACH_TEST_METHOD)
 internal class CashCardApplicationTests {
     @Autowired
-    lateinit var restTemplate: TestRestTemplate
+    private lateinit var restTemplate: TestRestTemplate
+
+    @Test
+    fun shouldReturnAllCashCardsWhenListIsRequested() {
+        val response = restTemplate.getForEntity("/cashcards", String::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+
+        val documentContext = JsonPath.parse(response.body)
+            val cashCardCount = documentContext.read<Int>("$.length()")
+        assertThat(cashCardCount).isEqualTo(3)
+
+        val ids: JSONArray = documentContext.read("$..id")
+        assertThat(ids).containsExactlyInAnyOrder(99, 100, 101)
+
+        val amounts: JSONArray = documentContext.read("$..amount")
+        assertThat(amounts).containsExactlyInAnyOrder(123.45, 1.0, 150.00)
+    }
+
+    @Test
+    fun shouldReturnAPageOfCashCards() {
+        val response = restTemplate.getForEntity(
+            "/cashcards?page=0&size=1",
+            String::class.java
+        )
+        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+
+        val documentContext = JsonPath.parse(response.body)
+        val page = documentContext.read<JSONArray>("$[*]")
+        assertThat(page.size).isEqualTo(1)
+    }
+
+    @Test
+    fun shouldReturnASortedPageOfCashCards() {
+        val response = restTemplate.getForEntity(
+            "/cashcards?page=0&size=1&sort=amount,asc",
+            String::class.java
+        )
+        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+
+        val documentContext = JsonPath.parse(response.body)
+        val read = documentContext.read<JSONArray>("$[*]")
+        assertThat(read.size).isEqualTo(1)
+
+        val amount = documentContext.read<Double>("$[0].amount")
+        assertThat(amount).isEqualTo(1.00)
+    }
+
+    @Test
+    fun shouldReturnASortedPageOfCashCardsWithNoParametersAndUseDefaultValues() {
+        val response = restTemplate.getForEntity("/cashcards", String::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+
+        val documentContext = JsonPath.parse(response.body)
+        val page = documentContext.read<JSONArray>("$[*]")
+        assertThat(page.size).isEqualTo(3)
+
+        val amounts = documentContext.read<JSONArray>("$..amount")
+        assertThat(amounts).containsExactly(1.00, 123.45, 150.00)
+    }
 
     @Test
     fun shouldReturnACashCardWhenDataIsSaved() {
         val response = restTemplate.getForEntity("/cashcards/99", String::class.java)
 
-        Assertions.assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
 
         val documentContext = JsonPath.parse(response.body)
         val id = documentContext.read<Number>("$.id")
-        Assertions.assertThat(id).isEqualTo(99)
+        assertThat(id).isEqualTo(99)
 
         val amount = documentContext.read<Double>("$.amount")
-        Assertions.assertThat(amount).isEqualTo(123.45)
+        assertThat(amount).isEqualTo(123.45)
     }
 
     @Test
+    @DirtiesContext
     fun shouldCreateANewCashCard() {
         val newCashCard = CashCard(null, 250.00)
         val createResponse = restTemplate.postForEntity(
             "/cashcards", newCashCard,
             Void::class.java
         )
-        Assertions.assertThat(createResponse.statusCode).isEqualTo(HttpStatus.CREATED)
+        assertThat(createResponse.statusCode).isEqualTo(HttpStatus.CREATED)
 
         val locationOfNewCashCard: URI? = createResponse.headers.location
         val getResponse = restTemplate.getForEntity(locationOfNewCashCard, String::class.java)
-        Assertions.assertThat(getResponse.statusCode).isEqualTo(HttpStatus.OK)
+        assertThat(getResponse.statusCode).isEqualTo(HttpStatus.OK)
 
         // Add assertions such as these
         val documentContext = JsonPath.parse(getResponse.body)
         val id = documentContext.read<Number>("$.id")
         val amount = documentContext.read<Double>("$.amount")
 
-        Assertions.assertThat(id).isNotNull()
-        Assertions.assertThat(amount).isEqualTo(250.00)
+        assertThat(id).isNotNull()
+        assertThat(amount).isEqualTo(250.00)
     }
 }
