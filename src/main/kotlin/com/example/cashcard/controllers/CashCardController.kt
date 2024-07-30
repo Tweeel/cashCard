@@ -3,10 +3,9 @@ package com.example.cashcard.controllers
 import com.example.cashcard.models.CashCard
 import com.example.cashcard.repositories.CashCardRepository
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
+import java.net.URI
+
 
 @RestController
 @RequestMapping("/cashcards")
@@ -17,9 +16,20 @@ class CashCardController(
     fun findById(@PathVariable requestedId: Long): ResponseEntity<CashCard> {
         val cashCardOptional = cashCardRepository.findById(requestedId)
         return if (cashCardOptional.isPresent) {
-            ResponseEntity.ok(cashCardOptional.get());
+            ResponseEntity.ok(cashCardOptional.get())
         } else {
-            ResponseEntity.notFound().build();
+            ResponseEntity.notFound().build()
         }
+    }
+
+    @PostMapping
+    private fun createCashCard(
+        @RequestBody newCashCardRequest: CashCard
+    ): ResponseEntity<Void> {
+        println(newCashCardRequest)
+        val savedCashCard = cashCardRepository.save(newCashCardRequest)
+        println(savedCashCard)
+        val locationOfNewCashCard = URI.create("/cashcards/${savedCashCard.id}")
+        return ResponseEntity.created(locationOfNewCashCard).build()
     }
 }
