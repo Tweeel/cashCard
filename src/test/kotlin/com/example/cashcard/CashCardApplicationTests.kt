@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.test.annotation.DirtiesContext
 import java.net.URI
@@ -148,5 +150,46 @@ internal class CashCardApplicationTests {
 
         assertThat(id).isNotNull()
         assertThat(amount).isEqualTo(250.00)
+    }
+
+    @Test
+    @DirtiesContext
+    fun shouldUpdateAnExistingCashCard() {
+        val cashCardUpdate = CashCard(null, 19.99, null)
+        val request = HttpEntity(cashCardUpdate)
+        val response = restTemplate
+            .withBasicAuth("sarah1", "abc123")
+            .exchange("/cashcards/99", HttpMethod.PUT, request, Void::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.NO_CONTENT)
+
+        val getResponse = restTemplate
+            .withBasicAuth("sarah1", "abc123")
+            .getForEntity("/cashcards/99", String::class.java)
+        assertThat(getResponse.statusCode).isEqualTo(HttpStatus.OK)
+        val documentContext = JsonPath.parse(getResponse.body)
+        val id = documentContext.read<Number>("$.id")
+        val amount = documentContext.read<Double>("$.amount")
+        assertThat(id).isEqualTo(99)
+        assertThat(amount).isEqualTo(19.99)
+    }
+
+    @Test
+    fun shouldNotUpdateACashCardThatDoesNotExist() {
+        val unknownCard = CashCard(null, 19.99, null)
+        val request = HttpEntity(unknownCard)
+        val response = restTemplate
+            .withBasicAuth("sarah1", "abc123")
+            .exchange("/cashcards/99999", HttpMethod.PUT, request, Void::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
+    fun shouldNotUpdateACashCardThatIsOwnedBySomeoneElse() {
+        val kumarsCard = CashCard(null, 333.33, null)
+        val request = HttpEntity(kumarsCard)
+        val response = restTemplate
+            .withBasicAuth("sarah1", "abc123")
+            .exchange("/cashcards/102", HttpMethod.PUT, request, Void::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
     }
 }
