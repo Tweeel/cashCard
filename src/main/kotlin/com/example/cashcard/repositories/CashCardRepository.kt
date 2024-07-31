@@ -1,7 +1,14 @@
 package com.example.cashcard.repositories
 
 import com.example.cashcard.models.CashCard
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.CrudRepository
 import org.springframework.data.repository.PagingAndSortingRepository
 
-interface CashCardRepository: CrudRepository<CashCard, Long>, PagingAndSortingRepository<CashCard, Long>
+
+interface CashCardRepository : CrudRepository<CashCard, Long>,
+    PagingAndSortingRepository<CashCard, Long> {
+    fun findByIdAndOwner(id: Long, owner: String): CashCard?
+    fun findByOwner(owner: String, pageRequest: PageRequest): Page<CashCard>
+}

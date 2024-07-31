@@ -20,12 +20,43 @@ internal class CashCardApplicationTests {
     private lateinit var restTemplate: TestRestTemplate
 
     @Test
+    fun shouldNotReturnACashCardWhenUsingBadCredentials() {
+        var response = restTemplate
+            .withBasicAuth("BAD-USER", "abc123")
+            .getForEntity("/cashcards/99", String::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.UNAUTHORIZED)
+
+        response = restTemplate
+            .withBasicAuth("sarah1", "BAD-PASSWORD")
+            .getForEntity("/cashcards/99", String::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.UNAUTHORIZED)
+    }
+
+    @Test
+    fun shouldRejectUsersWhoAreNotCardOwners() {
+        val response = restTemplate
+            .withBasicAuth("hank-owns-no-cards", "qrs456")
+            .getForEntity("/cashcards/99", String::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.FORBIDDEN)
+    }
+
+    @Test
+    fun shouldNotAllowAccessToCashCardsTheyDoNotOwn() {
+        val response = restTemplate
+            .withBasicAuth("sarah1", "abc123")
+            .getForEntity("/cashcards/102", String::class.java) // kumar2's data
+        assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
     fun shouldReturnAllCashCardsWhenListIsRequested() {
-        val response = restTemplate.getForEntity("/cashcards", String::class.java)
+        val response = restTemplate.withBasicAuth("sarah1", "abc123") // Add this
+            .getForEntity("/cashcards", String::class.java)
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
 
         val documentContext = JsonPath.parse(response.body)
-            val cashCardCount = documentContext.read<Int>("$.length()")
+        val cashCardCount = documentContext.read<Int>("$.length()")
+
         assertThat(cashCardCount).isEqualTo(3)
 
         val ids: JSONArray = documentContext.read("$..id")
@@ -37,10 +68,11 @@ internal class CashCardApplicationTests {
 
     @Test
     fun shouldReturnAPageOfCashCards() {
-        val response = restTemplate.getForEntity(
-            "/cashcards?page=0&size=1",
-            String::class.java
-        )
+        val response = restTemplate.withBasicAuth("sarah1", "abc123") // Add this
+            .getForEntity(
+                "/cashcards?page=0&size=1",
+                String::class.java
+            )
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
 
         val documentContext = JsonPath.parse(response.body)
@@ -50,10 +82,11 @@ internal class CashCardApplicationTests {
 
     @Test
     fun shouldReturnASortedPageOfCashCards() {
-        val response = restTemplate.getForEntity(
-            "/cashcards?page=0&size=1&sort=amount,asc",
-            String::class.java
-        )
+        val response = restTemplate.withBasicAuth("sarah1", "abc123") // Add this
+            .getForEntity(
+                "/cashcards?page=0&size=1&sort=amount,asc",
+                String::class.java
+            )
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
 
         val documentContext = JsonPath.parse(response.body)
@@ -66,7 +99,8 @@ internal class CashCardApplicationTests {
 
     @Test
     fun shouldReturnASortedPageOfCashCardsWithNoParametersAndUseDefaultValues() {
-        val response = restTemplate.getForEntity("/cashcards", String::class.java)
+        val response = restTemplate.withBasicAuth("sarah1", "abc123") // Add this
+            .getForEntity("/cashcards", String::class.java)
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
 
         val documentContext = JsonPath.parse(response.body)
@@ -79,8 +113,9 @@ internal class CashCardApplicationTests {
 
     @Test
     fun shouldReturnACashCardWhenDataIsSaved() {
-        val response = restTemplate.getForEntity("/cashcards/99", String::class.java)
-
+        val response = restTemplate
+            .withBasicAuth("sarah1", "abc123") // Add this
+            .getForEntity("/cashcards/99", String::class.java)
         assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
 
         val documentContext = JsonPath.parse(response.body)
@@ -94,17 +129,18 @@ internal class CashCardApplicationTests {
     @Test
     @DirtiesContext
     fun shouldCreateANewCashCard() {
-        val newCashCard = CashCard(null, 250.00)
-        val createResponse = restTemplate.postForEntity(
-            "/cashcards", newCashCard,
-            Void::class.java
-        )
+        val newCashCard = CashCard(null, 250.00, null)
+        val createResponse = restTemplate.withBasicAuth("sarah1", "abc123") // Add this
+            .postForEntity(
+                "/cashcards", newCashCard,
+                Void::class.java
+            )
         assertThat(createResponse.statusCode).isEqualTo(HttpStatus.CREATED)
 
         val locationOfNewCashCard: URI? = createResponse.headers.location
-        val getResponse = restTemplate.getForEntity(locationOfNewCashCard, String::class.java)
+        val getResponse = restTemplate.withBasicAuth("sarah1", "abc123") // Add this
+            .getForEntity(locationOfNewCashCard, String::class.java)
         assertThat(getResponse.statusCode).isEqualTo(HttpStatus.OK)
-
         // Add assertions such as these
         val documentContext = JsonPath.parse(getResponse.body)
         val id = documentContext.read<Number>("$.id")

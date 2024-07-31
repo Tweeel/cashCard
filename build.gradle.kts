@@ -29,6 +29,9 @@ dependencies {
     // Spring Data JDBC
     implementation("org.springframework.data:spring-data-jdbc")
     implementation("com.h2database:h2")
+
+    // Spring security
+    implementation("org.springframework.boot:spring-boot-starter-security")
 }
 
 kotlin {

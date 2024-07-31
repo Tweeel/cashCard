@@ -5,5 +5,6 @@ import org.springframework.data.annotation.Id
 data class CashCard(
     @Id
     val id: Long?,
-    val amount: Double
+    val amount: Double,
+    val owner: String? = ""
 )

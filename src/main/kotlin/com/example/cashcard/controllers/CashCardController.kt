@@ -8,6 +8,8 @@ import org.springframework.data.domain.Sort
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.net.URI
+import java.security.Principal
+import java.util.*
 
 
 @RestController
@@ -16,8 +18,9 @@ class CashCardController(
     private val cashCardRepository: CashCardRepository
 ) {
     @GetMapping
-    private fun findAll(pageable: Pageable): ResponseEntity<List<CashCard>> {
-        val page = cashCardRepository.findAll(
+    private fun findAll(pageable: Pageable, principal: Principal): ResponseEntity<List<CashCard>> {
+        val page = cashCardRepository.findByOwner(
+            principal.name,
             PageRequest.of(
                 pageable.pageNumber,
                 pageable.pageSize,
@@ -28,8 +31,8 @@ class CashCardController(
     }
 
     @GetMapping("/{requestedId}")
-    fun findById(@PathVariable requestedId: Long): ResponseEntity<CashCard> {
-        val cashCardOptional = cashCardRepository.findById(requestedId)
+    fun findById(@PathVariable requestedId: Long,principal: Principal): ResponseEntity<CashCard> {
+        val cashCardOptional = Optional.ofNullable(cashCardRepository.findByIdAndOwner(requestedId, principal.name))
         return if (cashCardOptional.isPresent) {
             ResponseEntity.ok(cashCardOptional.get())
         } else {
@@ -39,11 +42,10 @@ class CashCardController(
 
     @PostMapping
     private fun createCashCard(
-        @RequestBody newCashCardRequest: CashCard
+        @RequestBody newCashCardRequest: CashCard,
+        principal: Principal
     ): ResponseEntity<Void> {
-        println(newCashCardRequest)
-        val savedCashCard = cashCardRepository.save(newCashCardRequest)
-        println(savedCashCard)
+        val savedCashCard = cashCardRepository.save(newCashCardRequest.copy(owner = principal.name))
         val locationOfNewCashCard = URI.create("/cashcards/${savedCashCard.id}")
         return ResponseEntity.created(locationOfNewCashCard).build()
     }
