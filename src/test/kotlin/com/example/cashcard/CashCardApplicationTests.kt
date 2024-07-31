@@ -192,4 +192,40 @@ internal class CashCardApplicationTests {
             .exchange("/cashcards/102", HttpMethod.PUT, request, Void::class.java)
         assertThat(response.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
     }
+
+    @Test
+    @DirtiesContext
+    fun shouldDeleteAnExistingCashCard() {
+        val response = restTemplate
+            .withBasicAuth("sarah1", "abc123")
+            .exchange("/cashcards/99", HttpMethod.DELETE, null, Void::class.java)
+        assertThat(response.statusCode).isEqualTo(HttpStatus.NO_CONTENT)
+
+        // Add the following code:
+        val getResponse = restTemplate
+            .withBasicAuth("sarah1", "abc123")
+            .getForEntity("/cashcards/99", String::class.java)
+        assertThat(getResponse.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
+    fun shouldNotDeleteACashCardThatDoesNotExist() {
+        val deleteResponse = restTemplate
+            .withBasicAuth("sarah1", "abc123")
+            .exchange("/cashcards/99999", HttpMethod.DELETE, null, Void::class.java)
+        assertThat(deleteResponse.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+    }
+
+    @Test
+    fun shouldNotAllowDeletionOfCashCardsTheyDoNotOwn() {
+        val deleteResponse = restTemplate
+            .withBasicAuth("sarah1", "abc123")
+            .exchange("/cashcards/102", HttpMethod.DELETE, null, Void::class.java)
+        assertThat(deleteResponse.statusCode).isEqualTo(HttpStatus.NOT_FOUND)
+
+        val getResponse = restTemplate
+            .withBasicAuth("kumar2", "xyz789")
+            .getForEntity("/cashcards/102", String::class.java)
+        assertThat(getResponse.statusCode).isEqualTo(HttpStatus.OK)
+    }
 }

@@ -36,10 +36,10 @@ class CashCardController(
 
     @GetMapping("/{requestedId}")
     fun findById(@PathVariable requestedId: Long, principal: Principal): ResponseEntity<CashCard> {
-        val cashCard  = findCashCard(requestedId, principal)
-        return cashCard?.let{
+        val cashCard = findCashCard(requestedId, principal)
+        return cashCard?.let {
             ResponseEntity.ok(cashCard)
-        }?: run{
+        } ?: run {
             ResponseEntity.notFound().build()
         }
     }
@@ -68,5 +68,17 @@ class CashCardController(
             cashCardRepository.save(updatedCashCard)
             return ResponseEntity.noContent().build()
         } ?: return ResponseEntity.notFound().build()
+    }
+
+    @DeleteMapping("/{id}")
+    private fun deleteCashCard(
+        @PathVariable id: Long,
+        principal: Principal
+    ): ResponseEntity<Void> {
+        return if (cashCardRepository.existsByIdAndOwner(id, principal.name)) {
+            cashCardRepository.deleteById(id)
+            ResponseEntity.noContent().build()
+        } else
+            ResponseEntity.notFound().build()
     }
 }

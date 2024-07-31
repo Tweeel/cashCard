@@ -11,4 +11,6 @@ interface CashCardRepository : CrudRepository<CashCard, Long>,
     PagingAndSortingRepository<CashCard, Long> {
     fun findByIdAndOwner(id: Long, owner: String): CashCard?
     fun findByOwner(owner: String, pageRequest: PageRequest): Page<CashCard>
+    fun existsByIdAndOwner(id: Long?, owner: String?): Boolean
+
 }
